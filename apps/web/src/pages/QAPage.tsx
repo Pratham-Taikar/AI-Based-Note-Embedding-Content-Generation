@@ -71,20 +71,24 @@ const QAPage = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <h1 className="text-2xl font-semibold mb-4">Q&amp;A</h1>
-      <p className="text-sm text-slate-600 mb-4">
-        Ask questions scoped strictly to one subject; answers are verbatim snippets from your notes.
-      </p>
+    <div className="page-shell max-w-4xl">
+      <div>
+        <h1 className="page-title">Q&amp;A</h1>
+        <p className="page-subtitle">
+          Ask questions scoped to a single subject. Answers are verbatim snippets from your uploaded notes.
+        </p>
+      </div>
 
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
-      <form onSubmit={handleSubmit} className="space-y-3 mb-6">
-        <div className="flex flex-col md:flex-row gap-2 md:items-center">
-          <label className="text-sm font-medium">
-            Subject
+      <form onSubmit={handleSubmit} className="card-subtle p-5 space-y-4">
+        <div className="flex flex-col md:flex-row gap-3 md:items-center">
+          <div>
+            <label className="block text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">
+              Subject
+            </label>
             <select
-              className="border rounded px-3 py-2 text-sm ml-2"
+              className="select md:min-w-[220px]"
               value={selectedSubject}
               onChange={(e) => setSelectedSubject(e.target.value)}
             >
@@ -94,55 +98,65 @@ const QAPage = () => {
                 </option>
               ))}
             </select>
-          </label>
+          </div>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Question</label>
+          <label className="block text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">
+            Question
+          </label>
           <textarea
-            className="w-full border rounded px-3 py-2 text-sm min-h-[80px]"
+            className="textarea"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="E.g. Explain quicksort algorithm"
           />
         </div>
-        <button
-          type="submit"
-          disabled={loading || !question || !selectedSubject}
-          className="bg-slate-900 text-white rounded px-4 py-2 text-sm disabled:opacity-60"
-        >
-          {loading ? "Searching..." : "Ask"}
-        </button>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-slate-500">
+            Q&amp;A never calls an LLM. Everything you see comes directly from your notes.
+          </p>
+          <button
+            type="submit"
+            disabled={loading || !question || !selectedSubject}
+            className="btn-primary"
+          >
+            {loading ? "Searching..." : "Ask"}
+          </button>
+        </div>
       </form>
 
-      <div className="bg-white rounded-lg shadow p-4">
-        <h2 className="text-lg font-medium mb-2">Result</h2>
-        {!result && <p className="text-sm text-slate-500">No question yet.</p>}
+      <div className="card p-5">
+        <h2 className="text-lg font-medium text-slate-50 mb-2">Result</h2>
+        {!result && <p className="text-sm text-slate-400">No question yet. Ask something to see results.</p>}
         {result?.status === "not_found" && (
-          <p className="text-sm text-slate-700 whitespace-pre-line">{result.message}</p>
+          <p className="text-sm text-slate-300 whitespace-pre-line">{result.message}</p>
         )}
         {result?.status === "ok" && (
           <div className="space-y-3">
             <p className="text-sm">
-              <span className="font-semibold">Confidence:</span>{" "}
+              <span className="font-semibold text-slate-200">Confidence:</span>{" "}
               <span
                 className={
                   result.confidence === "High"
-                    ? "text-emerald-600"
+                    ? "text-emerald-400"
                     : result.confidence === "Medium"
-                    ? "text-amber-600"
-                    : "text-red-600"
+                    ? "text-amber-300"
+                    : "text-red-400"
                 }
               >
                 {result.confidence}
               </span>
             </p>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {result.snippets.map((s) => (
-                <div key={s.chunk_id + s.page_range + s.text.slice(0, 8)} className="border rounded p-2">
-                  <p className="text-sm whitespace-pre-line">{s.text}</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    <span className="font-semibold">Source:</span> {s.file_name} — page {s.page_range},{" "}
-                    chunk {s.chunk_id}
+                <div
+                  key={s.chunk_id + s.page_range + s.text.slice(0, 8)}
+                  className="rounded-lg border border-slate-800/80 bg-slate-900/70 p-3"
+                >
+                  <p className="text-sm text-slate-100 whitespace-pre-line">{s.text}</p>
+                  <p className="text-xs text-slate-500 mt-2">
+                    <span className="font-semibold text-slate-300">Source:</span> {s.file_name} — page{" "}
+                    {s.page_range}, chunk {s.chunk_id}
                   </p>
                 </div>
               ))}

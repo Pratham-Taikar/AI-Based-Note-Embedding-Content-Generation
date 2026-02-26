@@ -4,6 +4,7 @@ import AuthPage from "./pages/AuthPage";
 import DashboardPage from "./pages/DashboardPage";
 import QAPage from "./pages/QAPage";
 import StudyPage from "./pages/StudyPage";
+import LandingPage from "./pages/LandingPage";
 import { supabase } from "./supabaseClient";
 
 const AppShell = () => {
@@ -17,17 +18,22 @@ const AppShell = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <header className="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <span className="font-semibold text-slate-900">AskMyNotes</span>
-            <nav className="flex gap-3 text-sm">
+            <Link
+              to="/"
+              className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-2xl font-semibold text-transparent"
+            >
+              AskMyNotes
+            </Link>
+            <nav className="flex gap-2 text-base rounded-full border border-slate-800/80 bg-slate-900/70 px-1.5 py-1">
               <Link
                 to="/dashboard"
                 className={
                   location.pathname === "/dashboard"
-                    ? "text-slate-900 font-medium"
-                    : "text-slate-500 hover:text-slate-900"
+                    ? "rounded-full bg-slate-800 px-4 py-1.5 text-sm font-semibold text-emerald-300 shadow-inner shadow-slate-900"
+                    : "rounded-full px-4 py-1.5 text-sm text-slate-200 hover:text-emerald-300"
                 }
               >
                 Dashboard
@@ -36,8 +42,8 @@ const AppShell = () => {
                 to="/qa"
                 className={
                   location.pathname === "/qa"
-                    ? "text-slate-900 font-medium"
-                    : "text-slate-500 hover:text-slate-900"
+                    ? "rounded-full bg-slate-800 px-4 py-1.5 text-sm font-semibold text-emerald-300 shadow-inner shadow-slate-900"
+                    : "rounded-full px-4 py-1.5 text-sm text-slate-200 hover:text-emerald-300"
                 }
               >
                 Q&amp;A
@@ -46,8 +52,8 @@ const AppShell = () => {
                 to="/study"
                 className={
                   location.pathname === "/study"
-                    ? "text-slate-900 font-medium"
-                    : "text-slate-500 hover:text-slate-900"
+                    ? "rounded-full bg-slate-800 px-4 py-1.5 text-sm font-semibold text-emerald-300 shadow-inner shadow-slate-900"
+                    : "rounded-full px-4 py-1.5 text-sm text-slate-200 hover:text-emerald-300"
                 }
               >
                 Study
@@ -57,14 +63,15 @@ const AppShell = () => {
           <button
             type="button"
             onClick={handleSignOut}
-            className="text-xs text-slate-600 hover:text-slate-900 underline"
+            className="text-sm text-slate-200 hover:text-emerald-300 underline"
           >
             Sign out
           </button>
         </div>
       </header>
-      <main className="flex-1 px-4">
+      <main className="flex-1">
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/qa" element={<QAPage />} />
           <Route path="/study" element={<StudyPage />} />

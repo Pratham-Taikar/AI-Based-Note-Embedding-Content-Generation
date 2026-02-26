@@ -36,58 +36,66 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="w-full max-w-md bg-white shadow-md rounded-lg p-8">
-        <h1 className="text-2xl font-semibold mb-4 text-center">AskMyNotes</h1>
-        <p className="text-sm text-slate-500 mb-6 text-center">
-          Sign {mode === "login" ? "in" : "up"} with your email to continue.
-        </p>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="card w-full max-w-md p-8">
+        <div className="mb-6 text-center">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Welcome to</p>
+          <h1 className="mt-1 bg-gradient-to-r from-emerald-400 via-cyan-400 to-sky-400 bg-clip-text text-3xl font-semibold tracking-tight text-transparent">
+            AskMyNotes
+          </h1>
+          <p className="mt-3 text-sm text-slate-400">
+            Sign {mode === "login" ? "in" : "up"} with your email to manage and study your own notes.
+          </p>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
+            <label className="block text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">
+              Email
+            </label>
             <input
               type="email"
-              className="w-full border rounded px-3 py-2 text-sm"
+              className="input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              placeholder="you@example.com"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
+            <label className="block text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">
+              Password
+            </label>
             <input
               type="password"
-              className="w-full border rounded px-3 py-2 text-sm"
+              className="input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              placeholder="••••••••"
             />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-slate-900 text-white py-2 rounded text-sm hover:bg-slate-800 disabled:opacity-60"
-          >
-            {loading ? "Please wait..." : mode === "login" ? "Sign in" : "Sign up"}
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          <button type="submit" disabled={loading} className="btn-primary w-full">
+            {loading ? "Please wait..." : mode === "login" ? "Sign in" : "Create account"}
           </button>
         </form>
-        <div className="mt-4 text-center text-sm">
+        <div className="mt-5 flex items-center justify-between text-xs text-slate-400">
+          <span>{mode === "login" ? "New here?" : "Already using AskMyNotes?"}</span>
           {mode === "login" ? (
             <button
               type="button"
-              className="text-slate-700 underline"
+              className="text-emerald-300 hover:text-emerald-200 underline"
               onClick={() => setMode("signup")}
             >
-              Need an account? Sign up
+              Create an account
             </button>
           ) : (
             <button
               type="button"
-              className="text-slate-700 underline"
+              className="text-emerald-300 hover:text-emerald-200 underline"
               onClick={() => setMode("login")}
             >
-              Already have an account? Sign in
+              Back to sign in
             </button>
           )}
         </div>

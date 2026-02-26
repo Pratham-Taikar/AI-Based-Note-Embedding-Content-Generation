@@ -94,19 +94,23 @@ const StudyPage = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <h1 className="text-2xl font-semibold mb-4">Study Mode</h1>
-      <p className="text-sm text-slate-600 mb-4">
-        Generate MCQs and short-answer questions from your notes for a single subject.
-      </p>
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+    <div className="page-shell max-w-4xl">
+      <div>
+        <h1 className="page-title">Study Mode</h1>
+        <p className="page-subtitle">
+          Turn your notes into practice questions for active recall. Everything stays scoped to one subject.
+        </p>
+      </div>
+      {error && <p className="text-sm text-red-400 mb-2">{error}</p>}
 
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
+      <div className="card-subtle p-4 mb-4">
         <form className="flex flex-col md:flex-row gap-3 md:items-center">
-          <label className="text-sm font-medium">
-            Subject
+          <div>
+            <label className="block text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">
+              Subject
+            </label>
             <select
-              className="border rounded px-3 py-2 text-sm ml-2"
+              className="select md:min-w-[220px]"
               value={selectedSubject}
               onChange={(e) => setSelectedSubject(e.target.value)}
             >
@@ -116,40 +120,43 @@ const StudyPage = () => {
                 </option>
               ))}
             </select>
-          </label>
+          </div>
         </form>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="card p-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-medium">MCQs</h2>
+            <h2 className="text-lg font-medium text-slate-50">MCQs</h2>
             <form onSubmit={handleGenerateMcq}>
               <button
                 type="submit"
                 disabled={mcqLoading || !selectedSubject}
-                className="bg-slate-900 text-white rounded px-3 py-1 text-sm disabled:opacity-60"
+                className="btn-primary px-3 py-1"
               >
                 {mcqLoading ? "Generating..." : "Generate MCQs"}
               </button>
             </form>
           </div>
-          {!mcqResult && <p className="text-sm text-slate-500">No MCQs yet.</p>}
+          {!mcqResult && <p className="text-sm text-slate-400">No MCQs yet.</p>}
           {mcqResult?.status === "insufficient" && (
-            <p className="text-sm text-slate-700 whitespace-pre-line">{mcqResult.message}</p>
+            <p className="text-sm text-slate-300 whitespace-pre-line">{mcqResult.message}</p>
           )}
           {mcqResult?.status === "ok" && (
-            <ol className="list-decimal list-inside space-y-3 text-sm">
+            <ol className="list-decimal list-inside space-y-3 text-sm text-slate-100">
               {mcqResult.items.map((item, idx) => (
-                <li key={idx} className="border rounded p-2">
-                  <p className="font-medium mb-1">{item.question}</p>
+                <li
+                  key={idx}
+                  className="rounded-lg border border-slate-800/80 bg-slate-900/70 p-3 shadow-sm shadow-slate-950/40"
+                >
+                  <p className="font-medium mb-1 text-slate-50">{item.question}</p>
                   <ul className="text-sm mb-1">
                     <li>A. {item.options.A}</li>
                     <li>B. {item.options.B}</li>
                     <li>C. {item.options.C}</li>
                     <li>D. {item.options.D}</li>
                   </ul>
-                  <p className="text-xs text-emerald-700 mb-1">
+                  <p className="text-xs text-emerald-300 mb-1">
                     Correct: {item.correct} — {item.explanation}
                   </p>
                   <p className="text-xs text-slate-500">
@@ -164,29 +171,32 @@ const StudyPage = () => {
           )}
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="card p-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-medium">Short answers</h2>
+            <h2 className="text-lg font-medium text-slate-50">Short answers</h2>
             <form onSubmit={handleGenerateShort}>
               <button
                 type="submit"
                 disabled={shortLoading || !selectedSubject}
-                className="bg-slate-900 text-white rounded px-3 py-1 text-sm disabled:opacity-60"
+                className="btn-primary px-3 py-1"
               >
                 {shortLoading ? "Generating..." : "Generate short answers"}
               </button>
             </form>
           </div>
-          {!shortResult && <p className="text-sm text-slate-500">No short-answer questions yet.</p>}
+          {!shortResult && <p className="text-sm text-slate-400">No short-answer questions yet.</p>}
           {shortResult?.status === "insufficient" && (
-            <p className="text-sm text-slate-700 whitespace-pre-line">{shortResult.message}</p>
+            <p className="text-sm text-slate-300 whitespace-pre-line">{shortResult.message}</p>
           )}
           {shortResult?.status === "ok" && (
-            <ol className="list-decimal list-inside space-y-3 text-sm">
+            <ol className="list-decimal list-inside space-y-3 text-sm text-slate-100">
               {shortResult.items.map((item, idx) => (
-                <li key={idx} className="border rounded p-2">
-                  <p className="font-medium mb-1">{item.question}</p>
-                  <p className="text-sm mb-1">{item.answer}</p>
+                <li
+                  key={idx}
+                  className="rounded-lg border border-slate-800/80 bg-slate-900/70 p-3 shadow-sm shadow-slate-950/40"
+                >
+                  <p className="font-medium mb-1 text-slate-50">{item.question}</p>
+                  <p className="text-sm mb-1 text-slate-100">{item.answer}</p>
                   <p className="text-xs text-slate-500">
                     Citations:{" "}
                     {item.citations

@@ -83,19 +83,21 @@ const DashboardPage = () => {
   const reachedLimit = subjects.length >= 3;
 
   return (
-    <div className="max-w-5xl mx-auto py-8">
-      <h1 className="text-2xl font-semibold mb-4">Dashboard</h1>
-      <p className="text-sm text-slate-600 mb-4">
-        Create up to 3 subjects and upload PDF/TXT notes for each.
-      </p>
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+    <div className="page-shell">
+      <div>
+        <h1 className="page-title">Dashboard</h1>
+        <p className="page-subtitle">
+          Create up to 3 subjects and upload PDF/TXT notes to build your personal knowledge base.
+        </p>
+      </div>
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
-      <div className="bg-white rounded-lg shadow p-4 mb-8">
-        <h2 className="text-lg font-medium mb-2">Subjects</h2>
+      <div className="card-subtle p-5 mb-4">
+        <h2 className="text-lg font-medium text-slate-50 mb-2">Subjects</h2>
         <form onSubmit={handleCreateSubject} className="flex flex-wrap gap-2 mb-4">
           <input
             type="text"
-            className="border rounded px-3 py-2 text-sm flex-1 min-w-[180px]"
+            className="input flex-1 min-w-[180px]"
             placeholder="New subject name"
             value={newSubjectName}
             onChange={(e) => setNewSubjectName(e.target.value)}
@@ -104,27 +106,29 @@ const DashboardPage = () => {
           <button
             type="submit"
             disabled={reachedLimit || !newSubjectName}
-            className="bg-slate-900 text-white rounded px-4 py-2 text-sm disabled:opacity-60"
+            className="btn-primary"
           >
             Add subject
           </button>
         </form>
         {reachedLimit && (
-          <p className="text-xs text-slate-500">You have reached the maximum of 3 subjects.</p>
+          <p className="text-xs text-amber-300/80">
+            You have reached the maximum of 3 subjects for this account.
+          </p>
         )}
         {loadingSubjects ? (
-          <p className="text-sm text-slate-500">Loading subjects...</p>
+          <p className="text-sm text-slate-400">Loading subjects...</p>
         ) : subjects.length === 0 ? (
-          <p className="text-sm text-slate-500">No subjects yet.</p>
+          <p className="text-sm text-slate-400">No subjects yet. Create your first subject to get started.</p>
         ) : (
-          <div className="space-y-4">
+          <div className="mt-3 space-y-4">
             {subjects.map((s) => (
-              <div key={s.id} className="border rounded p-3">
+              <div key={s.id} className="card-subtle p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium">{s.name}</h3>
+                  <h3 className="font-medium text-slate-50">{s.name}</h3>
                 </div>
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                  <label className="text-sm">
+                  <label className="text-sm text-slate-300">
                     <span className="mr-2">Upload notes (PDF/TXT):</span>
                     <input
                       type="file"
@@ -133,22 +137,22 @@ const DashboardPage = () => {
                     />
                   </label>
                   {uploadingFor === s.id && (
-                    <p className="text-xs text-slate-500">Uploading and ingesting...</p>
+                    <p className="text-xs text-emerald-300/80">Uploading and ingesting...</p>
                   )}
                 </div>
                 <div className="mt-3">
-                  <p className="text-xs font-semibold text-slate-500 mb-1">Uploaded documents</p>
-                  <ul className="text-xs text-slate-600 space-y-1">
+                  <p className="text-xs font-semibold text-slate-400 mb-1">Uploaded documents</p>
+                  <ul className="text-xs text-slate-300 space-y-1">
                     {(documentsBySubject[s.id] ?? []).map((d) => (
                       <li key={d.id} className="flex justify-between">
                         <span>{d.file_name}</span>
-                        <span className="text-slate-400">
+                        <span className="text-slate-500">
                           {d.page_count ? `${d.page_count} pages` : ""}
                         </span>
                       </li>
                     ))}
                     {(documentsBySubject[s.id] ?? []).length === 0 && (
-                      <li className="text-slate-400">No documents yet.</li>
+                      <li className="text-slate-500">No documents yet.</li>
                     )}
                   </ul>
                 </div>
