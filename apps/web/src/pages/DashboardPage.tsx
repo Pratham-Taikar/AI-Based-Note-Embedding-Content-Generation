@@ -4,6 +4,7 @@ import { api } from "../api";
 interface Subject {
   id: string;
   name: string;
+  created_at: string;
 }
 
 interface Document {
@@ -19,6 +20,7 @@ const DashboardPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const [documentsBySubject, setDocumentsBySubject] = useState<Record<string, Document[]>>({});
+  const FILE_LIMIT_PER_SUBJECT = 10;
 
   const loadSubjects = async () => {
     setLoadingSubjects(true);
@@ -61,22 +63,50 @@ const DashboardPage = () => {
     }
   };
 
-  const handleUpload = async (subjectId: string, file: File | null) => {
-    if (!file) return;
+  const handleUpload = async (subjectId: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
     setError(null);
     setUploadingFor(subjectId);
     try {
-      const formData = new FormData();
-      formData.append("subject_id", subjectId);
-      formData.append("file", file);
-      await api.post("/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const existingCount = (documentsBySubject[subjectId] ?? []).length;
+      const remaining = Math.max(FILE_LIMIT_PER_SUBJECT - existingCount, 0);
+      const filesToUpload = Array.from(files).slice(0, remaining);
+
+      for (const file of filesToUpload) {
+        const formData = new FormData();
+        formData.append("subject_id", subjectId);
+        formData.append("file", file);
+        // Upload sequentially to keep API load reasonable
+        await api.post("/upload", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+
       await loadSubjects();
     } catch (err: any) {
       setError(err?.response?.data?.error ?? "Failed to upload file");
     } finally {
       setUploadingFor(null);
+    }
+  };
+
+  const handleDeleteSubject = async (subjectId: string) => {
+    const confirmDelete = window.confirm(
+      "Delete this subject and all of its uploaded documents and chunks? This cannot be undone."
+    );
+    if (!confirmDelete) return;
+
+    setError(null);
+    try {
+      await api.delete(`/subjects/${subjectId}`);
+      setSubjects((prev) => prev.filter((s) => s.id !== subjectId));
+      setDocumentsBySubject((prev) => {
+        const next = { ...prev };
+        delete next[subjectId];
+        return next;
+      });
+    } catch (err: any) {
+      setError(err?.response?.data?.error ?? "Failed to delete subject");
     }
   };
 
@@ -123,19 +153,48 @@ const DashboardPage = () => {
         ) : (
           <div className="mt-3 space-y-4">
             {subjects.map((s) => (
-              <div key={s.id} className="card-subtle p-3">
+              <div key={s.id} className="card-subtle p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-slate-50">{s.name}</h3>
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-50">{s.name}</h3>
+                    <p className="text-xs text-slate-500">
+                      {(documentsBySubject[s.id] ?? []).length} / {FILE_LIMIT_PER_SUBJECT} files uploaded
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteSubject(s.id)}
+                    className="btn-ghost text-xs px-2 py-1"
+                  >
+                    Delete subject
+                  </button>
                 </div>
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                  <label className="text-sm text-slate-300">
-                    <span className="mr-2">Upload notes (PDF/TXT):</span>
-                    <input
-                      type="file"
-                      accept=".pdf,.txt"
-                      onChange={(e) => handleUpload(s.id, e.target.files?.[0] ?? null)}
-                    />
-                  </label>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm text-slate-300">Upload notes (PDF/TXT, up to 10 files):</span>
+                    <div className="flex items-center gap-3">
+                      <label className="btn-ghost cursor-pointer text-sm">
+                        Choose files
+                        <input
+                          type="file"
+                          multiple
+                          accept=".pdf,.txt"
+                          className="sr-only"
+                          onChange={(e) => {
+                            void handleUpload(s.id, e.target.files);
+                            // Reset input so the same files can be chosen again if needed
+                            e.target.value = "";
+                          }}
+                          disabled={(documentsBySubject[s.id] ?? []).length >= FILE_LIMIT_PER_SUBJECT}
+                        />
+                      </label>
+                      <p className="text-xs text-slate-500">
+                        {(documentsBySubject[s.id] ?? []).length >= FILE_LIMIT_PER_SUBJECT
+                          ? "File limit reached for this subject."
+                          : "You can add more files later if needed."}
+                      </p>
+                    </div>
+                  </div>
                   {uploadingFor === s.id && (
                     <p className="text-xs text-emerald-300/80">Uploading and ingesting...</p>
                   )}

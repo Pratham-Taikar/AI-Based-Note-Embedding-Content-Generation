@@ -104,6 +104,46 @@ app.get("/subjects", requireAuth, async (req: AuthedRequest, res) => {
   }
 });
 
+// DELETE /subjects/:id
+app.delete("/subjects/:id", requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    const userId = req.userId!;
+    const subjectId = req.params.id;
+
+    if (!subjectId) {
+      return res.status(400).json({ error: "Subject id is required" });
+    }
+
+    // Ensure subject belongs to the current user
+    const { data: existing, error: existingError } = await supabaseAdmin
+      .from("subjects")
+      .select("id")
+      .eq("id", subjectId)
+      .eq("user_id", userId)
+      .single();
+
+    if (existingError || !existing) {
+      return res.status(404).json({ error: "Subject not found for user" });
+    }
+
+    const { error: deleteError } = await supabaseAdmin
+      .from("subjects")
+      .delete()
+      .eq("id", subjectId)
+      .eq("user_id", userId);
+
+    if (deleteError) {
+      return res.status(500).json({ error: `Failed to delete subject: ${deleteError.message}` });
+    }
+
+    // Related documents and chunks are removed via ON DELETE CASCADE in the database schema
+    return res.status(204).send();
+  } catch (err) {
+    console.error("DELETE /subjects/:id error", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /documents?subject_id=...
 app.get("/documents", requireAuth, async (req: AuthedRequest, res) => {
   try {

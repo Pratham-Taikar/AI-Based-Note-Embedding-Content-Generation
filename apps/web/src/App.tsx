@@ -25,7 +25,7 @@ const AppShell = () => {
               to="/"
               className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-2xl font-semibold text-transparent"
             >
-              AskMyNotes
+              AskMyNotes/AntiMatter
             </Link>
             <nav className="flex gap-2 text-base rounded-full border border-slate-800/80 bg-slate-900/70 px-1.5 py-1">
               <Link
