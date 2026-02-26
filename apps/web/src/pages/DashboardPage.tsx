@@ -1,0 +1,164 @@
+import { FormEvent, useEffect, useState } from "react";
+import { api } from "../api";
+
+interface Subject {
+  id: string;
+  name: string;
+}
+
+interface Document {
+  id: string;
+  file_name: string;
+  page_count: number | null;
+}
+
+const DashboardPage = () => {
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [newSubjectName, setNewSubjectName] = useState("");
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadingFor, setUploadingFor] = useState<string | null>(null);
+  const [documentsBySubject, setDocumentsBySubject] = useState<Record<string, Document[]>>({});
+
+  const loadSubjects = async () => {
+    setLoadingSubjects(true);
+    setError(null);
+    try {
+      const res = await api.get<Subject[]>("/subjects");
+      setSubjects(res.data);
+
+      // Load documents for each
+      const docEntries: Record<string, Document[]> = {};
+      await Promise.all(
+        res.data.map(async (s) => {
+          const docsRes = await api.get<Document[]>("/documents", {
+            params: { subject_id: s.id },
+          });
+          docEntries[s.id] = docsRes.data;
+        })
+      );
+      setDocumentsBySubject(docEntries);
+    } catch (err: any) {
+      setError(err?.response?.data?.error ?? "Failed to load subjects");
+    } finally {
+      setLoadingSubjects(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadSubjects();
+  }, []);
+
+  const handleCreateSubject = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      const res = await api.post<Subject>("/subjects", { name: newSubjectName });
+      setNewSubjectName("");
+      setSubjects((prev) => [...prev, res.data]);
+    } catch (err: any) {
+      setError(err?.response?.data?.error ?? "Failed to create subject");
+    }
+  };
+
+  const handleUpload = async (subjectId: string, file: File | null) => {
+    if (!file) return;
+    setError(null);
+    setUploadingFor(subjectId);
+    try {
+      const formData = new FormData();
+      formData.append("subject_id", subjectId);
+      formData.append("file", file);
+      await api.post("/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      await loadSubjects();
+    } catch (err: any) {
+      setError(err?.response?.data?.error ?? "Failed to upload file");
+    } finally {
+      setUploadingFor(null);
+    }
+  };
+
+  const reachedLimit = subjects.length >= 3;
+
+  return (
+    <div className="max-w-5xl mx-auto py-8">
+      <h1 className="text-2xl font-semibold mb-4">Dashboard</h1>
+      <p className="text-sm text-slate-600 mb-4">
+        Create up to 3 subjects and upload PDF/TXT notes for each.
+      </p>
+      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+
+      <div className="bg-white rounded-lg shadow p-4 mb-8">
+        <h2 className="text-lg font-medium mb-2">Subjects</h2>
+        <form onSubmit={handleCreateSubject} className="flex flex-wrap gap-2 mb-4">
+          <input
+            type="text"
+            className="border rounded px-3 py-2 text-sm flex-1 min-w-[180px]"
+            placeholder="New subject name"
+            value={newSubjectName}
+            onChange={(e) => setNewSubjectName(e.target.value)}
+            disabled={reachedLimit}
+          />
+          <button
+            type="submit"
+            disabled={reachedLimit || !newSubjectName}
+            className="bg-slate-900 text-white rounded px-4 py-2 text-sm disabled:opacity-60"
+          >
+            Add subject
+          </button>
+        </form>
+        {reachedLimit && (
+          <p className="text-xs text-slate-500">You have reached the maximum of 3 subjects.</p>
+        )}
+        {loadingSubjects ? (
+          <p className="text-sm text-slate-500">Loading subjects...</p>
+        ) : subjects.length === 0 ? (
+          <p className="text-sm text-slate-500">No subjects yet.</p>
+        ) : (
+          <div className="space-y-4">
+            {subjects.map((s) => (
+              <div key={s.id} className="border rounded p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-medium">{s.name}</h3>
+                </div>
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                  <label className="text-sm">
+                    <span className="mr-2">Upload notes (PDF/TXT):</span>
+                    <input
+                      type="file"
+                      accept=".pdf,.txt"
+                      onChange={(e) => handleUpload(s.id, e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                  {uploadingFor === s.id && (
+                    <p className="text-xs text-slate-500">Uploading and ingesting...</p>
+                  )}
+                </div>
+                <div className="mt-3">
+                  <p className="text-xs font-semibold text-slate-500 mb-1">Uploaded documents</p>
+                  <ul className="text-xs text-slate-600 space-y-1">
+                    {(documentsBySubject[s.id] ?? []).map((d) => (
+                      <li key={d.id} className="flex justify-between">
+                        <span>{d.file_name}</span>
+                        <span className="text-slate-400">
+                          {d.page_count ? `${d.page_count} pages` : ""}
+                        </span>
+                      </li>
+                    ))}
+                    {(documentsBySubject[s.id] ?? []).length === 0 && (
+                      <li className="text-slate-400">No documents yet.</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default DashboardPage;
