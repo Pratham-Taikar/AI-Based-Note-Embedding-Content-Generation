@@ -14,25 +14,13 @@ All data (files, chunks, embeddings) lives in **your** Supabase project, and eve
 
 ### Screenshots
 
-You can place screenshots under a `docs/` folder and wire them to these references:
+The repository includes three key screenshots at the root:
 
-- Landing page
+![AskMyNotes landing](./landing.png)
 
-  ```markdown
-  ![AskMyNotes landing](docs/landing.png)
-  ```
+![AskMyNotes Q&A](./qa.png)
 
-- Q&A experience
-
-  ```markdown
-  ![AskMyNotes Q&A](docs/qa.png)
-  ```
-
-- System architecture
-
-  ```markdown
-  ![AskMyNotes system architecture](docs/system-architecture.png)
-  ```
+![AskMyNotes system architecture](./system-architechture.png)
 
 ---
 
@@ -61,7 +49,6 @@ The monorepo is optimized for local development and can be adapted for productio
   - For each subject, upload **up to 10 PDF/TXT files**.
   - Files are stored in a Supabase storage bucket and chunked into embeddings in Postgres.
   - Subjects can be **deleted**; their documents and chunks are removed via `ON DELETE CASCADE`.
-
 - **Q&A over your notes (Evidence Mode)**
   - Ask free‑form questions scoped to a single subject.
   - Retrieval uses **vector search** (pgvector) over text chunks.
@@ -70,14 +57,12 @@ The monorepo is optimized for local development and can be adapted for productio
     - Citations (file name, page, chunk index).
     - A confidence label based on similarity score.
   - **No LLM** is used in the Q&A pipeline; answers are purely extracted from your notes.
-
 - **Study / Explain Mode**
   - Generate:
     - **MCQs** (multiple‑choice questions).
     - **Short‑answer questions**.
   - Uses **Groq** to synthesize questions and explanations from selected chunks.
   - Strictly grounded in the provided chunks (prompts and Zod validation enforce this).
-
 - **Security & multi‑tenancy**
   - All API endpoints validate Supabase JWTs.
   - All data (subjects, documents, chunks) is filtered by `user_id` at query time.
@@ -87,18 +72,16 @@ The monorepo is optimized for local development and can be adapted for productio
 
 ### Frontend Experience (`apps/web`)
 
-- **Landing page (`/`)**
+- **Landing page (`./`)**
   - Dark, modern hero section describing the product.
   - Calls‑to‑action to open the dashboard, Q&A, and Study Mode.
   - Long‑form content explaining:
     - Why evidence‑first answers matter.
     - How data is handled in Supabase.
     - A simple three‑step study workflow.
-
 - **Authentication**
   - Email/password signup and login using Supabase.
   - Session management handled by `@supabase/supabase-js`.
-
 - **Dashboard**
   - Create and list subjects (max 3 per user).
   - Delete existing subjects (with confirmation).
@@ -106,14 +89,12 @@ The monorepo is optimized for local development and can be adapted for productio
     - Upload up to **10** PDF/TXT files (multi‑file upload).
     - View a list of uploaded documents with page counts.
     - See how many files are used out of the limit (e.g., `3 / 10 files uploaded`).
-
 - **Q&A page**
   - Select a subject, type a question, and run Q&A.
   - Shows:
     - Confidence (High / Medium / Low) with color‑coded labels.
     - A list of retrieved snippets with verbatim text and citations.
   - Uses a shared Axios client that automatically attaches the Supabase access token.
-
 - **Study page**
   - Select a subject once, then:
     - Generate 5 MCQs via `/study/mcq`.
@@ -129,7 +110,6 @@ The monorepo is optimized for local development and can be adapted for productio
 - **Auth**
   - `authMiddleware` verifies a Supabase JWT from the `Authorization: Bearer <token>` header using the Supabase anon key.
   - On success, it attaches `req.userId` so every handler can scope queries by user.
-
 - **Core endpoints**
   - `GET /health` – authenticated health check.
   - `POST /subjects` – create a new subject (max 3 per user).
@@ -140,7 +120,6 @@ The monorepo is optimized for local development and can be adapted for productio
   - `POST /qa` – run Q&A using embeddings and pgvector search.
   - `POST /study/mcq` – generate MCQ questions via Groq.
   - `POST /study/short` – generate short‑answer questions via Groq.
-
 - **Ingestion pipeline**
   - Accepts a single PDF/TXT file per request.
   - For PDFs, uses `pdf-parse` with a simple page split; for TXT, treats the file as a single page.
@@ -149,14 +128,12 @@ The monorepo is optimized for local development and can be adapted for productio
     - Chunks text using `chunkMultiPageText`.
     - Embeds each chunk with a local model via `@xenova/transformers`.
     - Inserts into the `chunks` table with the 384‑dimensional embedding.
-
 - **Q&A pipeline**
   - Validates request via Zod.
   - Checks subject ownership.
   - Embeds the question, calls `match_chunks` RPC with the query embedding.
   - Scores sentences within each chunk using simple token overlaps and selects top snippets.
   - Returns structured `{ status, confidence, snippets }`.
-
 - **Study pipeline**
   - Validates body via Zod and checks subject ownership.
   - Pulls up to 200 chunks for the subject, then samples a coverage set (up to 50).
@@ -181,10 +158,8 @@ The monorepo is optimized for local development and can be adapted for productio
   - `chunks`
     - `id`, `user_id`, `subject_id`, `document_id`, `file_name`, `page_range`, `chunk_index`, `content`, `embedding vector(384)`, `created_at`.
     - Foreign key to `documents`, `ON DELETE CASCADE`.
-
 - **Indexes**
   - On `subjects.user_id`, `documents (user_id, subject_id)`, `chunks (user_id, subject_id)`, and `chunks.document_id`.
-
 - **RPC: `match_chunks`**
   - Given `p_user_id`, `p_subject_id`, and `query_embedding`, returns the top‑`k` most similar chunks.
   - Computes similarity as `1 - (embedding <=> query_embedding)` and orders by vector distance.
@@ -198,19 +173,16 @@ The system can be reasoned about in layered form, matching the architecture diag
 - **Client layer (React SPA)**
   - Landing page, dashboard, Q&A interface, and study mode UI.
   - Talks to the API with JSON requests and forwards Supabase auth tokens.
-
 - **API layer (Express)**
   - Orchestrates:
     - File upload and ingestion.
     - Retrieval‑constrained Q&A (evidence mode).
     - Controlled generative study/explain mode via Groq.
   - Performs validation (payloads + auth) before calling downstream services.
-
 - **Processing layer**
   - File processor (PDF/TXT).
   - Chunking engine.
   - Embedding generator using a HuggingFace transformer model.
-
 - **Data layer (Supabase)**
   - Supabase Storage: raw files.
   - `pgvector` for similarity search.
@@ -237,24 +209,17 @@ The provided system architecture diagram can be referenced in the **Screenshots*
 ### Supabase Setup
 
 1. **Apply schema**
-   - In the Supabase SQL editor, run the contents of `supabase/schema.sql`.
-
+  - In the Supabase SQL editor, run the contents of `supabase/schema.sql`.
 2. **Enable pgvector**
-   - Ensure the `vector` extension is enabled (if not already):
-
-   ```sql
-   create extension if not exists vector;
-   ```
-
+  - Ensure the `vector` extension is enabled (if not already):
 3. **Create storage bucket**
-   - Create a storage bucket named `notes` (or your preferred name; keep it in sync with your env config).
-   - Private access is recommended so only the backend service role can read/write raw files.
-
+  - Create a storage bucket named `notes` (or your preferred name; keep it in sync with your env config).
+  - Private access is recommended so only the backend service role can read/write raw files.
 4. **Collect Supabase credentials**
-   - From your Supabase project settings, copy:
-     - Project URL
-     - `anon` key
-     - `service_role` key
+  - From your Supabase project settings, copy:
+    - Project URL
+    - `anon` key
+    - `service_role` key
 
 You will use these values in both the **API** and **Web** environment files.
 
@@ -281,7 +246,6 @@ Fill in the real values as instructed in each `.env.example` file. At a high lev
   - Storage bucket name (e.g., `notes`).
   - Groq API key and chosen model.
   - Embedding configuration (dimension, similarity threshold) and server port.
-
 - **Web (`apps/web/.env`)** – includes:
   - Supabase URL and `anon` key for browser auth.
   - Base URL for the API:
@@ -315,37 +279,33 @@ Both commands are orchestrated via the root `package.json` using npm workspaces 
 Use this flow to confirm your setup is working end‑to‑end:
 
 1. **Start dev servers**
-   - Run `npm run dev` from the monorepo root.
-
+  - Run `npm run dev` from the monorepo root.
 2. **Sign up / log in**
-   - Open the web app in your browser (default `http://localhost:5173`).
-   - Sign up or log in with email/password (Supabase Auth).
-
+  - Open the web app in your browser (default `http://localhost:5173`).
+  - Sign up or log in with email/password (Supabase Auth).
 3. **Create subjects & upload notes**
-   - Create up to **3 subjects**.
-   - For each subject, upload up to **10** **PDF/TXT** files.
-   - The API will:
-     - Upload files to the storage bucket.
-     - Extract text (using `pdf-parse` for PDFs).
-     - Chunk and embed content, then store it in the `chunks` table.
-
+  - Create up to **3 subjects**.
+  - For each subject, upload up to **10** **PDF/TXT** files.
+  - The API will:
+    - Upload files to the storage bucket.
+    - Extract text (using `pdf-parse` for PDFs).
+    - Chunk and embed content, then store it in the `chunks` table.
 4. **Ask questions (Q&A)**
-   - Navigate to the **Q&A** page.
-   - Select a subject and ask a question.
-   - You should see:
-     - Evidence snippets from your notes.
-     - Citations (file name, page number, chunk index).
-     - A confidence label based on similarity.
-   - If nothing relevant is found, the UI will indicate that the answer is not in your notes for the selected subject.
-
+  - Navigate to the **Q&A** page.
+  - Select a subject and ask a question.
+  - You should see:
+    - Evidence snippets from your notes.
+    - Citations (file name, page number, chunk index).
+    - A confidence label based on similarity.
+  - If nothing relevant is found, the UI will indicate that the answer is not in your notes for the selected subject.
 5. **Generate study questions**
-   - Navigate to the **Study** page.
-   - Select a subject.
-   - Generate **MCQs** or **short‑answer** questions.
-   - Each question includes:
-     - The prompt and (for MCQs) options with the correct answer.
-     - A short explanation.
-     - Citations pointing back to the source chunks.
+  - Navigate to the **Study** page.
+  - Select a subject.
+  - Generate **MCQs** or **short‑answer** questions.
+  - Each question includes:
+    - The prompt and (for MCQs) options with the correct answer.
+    - A short explanation.
+    - Citations pointing back to the source chunks.
 
 ---
 
@@ -354,28 +314,21 @@ Use this flow to confirm your setup is working end‑to‑end:
 - **Frontend (`apps/web`)**
   - Can be deployed on platforms like Vercel or Netlify.
   - Build:
-
     ```bash
     npm run build --workspace apps/web
     ```
-
   - Serve the generated `dist` directory.
   - Configure `VITE_API_BASE_URL` in the hosting provider’s environment settings to point at your API.
-
 - **Backend (`apps/api`)**
   - Designed as a long‑running Node/Express server.
   - Build:
-
     ```bash
     npm run build --workspace apps/api
     ```
-
   - Start:
-
     ```bash
     npm start --workspace apps/api
     ```
-
   - Deploy on any Node platform (Railway, Render, Fly.io, a VM, etc.) with the required environment variables.
 
 ---
@@ -387,12 +340,10 @@ This repository is structured as an npm workspaces monorepo; typical contributio
 1. Install dependencies at the root: `npm install`.
 2. Make changes in `apps/api` and/or `apps/web`.
 3. Run type‑checking and linting from the root:
-
-   ```bash
+  ```bash
    npm run lint
    npm run build
-   ```
-
+  ```
 4. Verify the full flow locally using the **Quick Validation Flow** above.
 
 Feel free to adapt this project to your own Supabase/Groq setup, extend the schema, or tweak chunking and retrieval strategies for your use case.
