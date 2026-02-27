@@ -7,10 +7,9 @@ interface VoiceButtonProps {
   onFinalText: (text: string) => void;
   onCommand?: (cmd: VoiceCommand) => void;
   mode: Mode;
-  onListeningChange?: (listening: boolean) => void;
 }
 
-export const VoiceButton = ({ onFinalText, onCommand, mode, onListeningChange }: VoiceButtonProps) => {
+export const VoiceButton = ({ onFinalText, onCommand, mode }: VoiceButtonProps) => {
   const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,9 +35,6 @@ export const VoiceButton = ({ onFinalText, onCommand, mode, onListeningChange }:
     }
     recognitionRef.current = null;
     setListening(false);
-    if (onListeningChange) {
-      onListeningChange(false);
-    }
   };
 
   const startListening = () => {
@@ -50,12 +46,11 @@ export const VoiceButton = ({ onFinalText, onCommand, mode, onListeningChange }:
       return;
     }
 
-    setError(null);
-
-    // Stop any ongoing speech while the user is speaking.
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
+
+    setError(null);
     const recognition = new SR();
     recognition.lang = "en-US";
     recognition.continuous = false;
@@ -92,17 +87,11 @@ export const VoiceButton = ({ onFinalText, onCommand, mode, onListeningChange }:
 
     recognition.onend = () => {
       setListening(false);
-      if (onListeningChange) {
-        onListeningChange(false);
-      }
     };
 
     recognitionRef.current = recognition;
     recognition.start();
     setListening(true);
-    if (onListeningChange) {
-      onListeningChange(true);
-    }
   };
 
   const handleToggle = () => {

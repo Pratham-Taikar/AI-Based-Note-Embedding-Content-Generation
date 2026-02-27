@@ -46,7 +46,6 @@ const QAPage = () => {
   const [followUpMode, setFollowUpMode] = useState(false);
   const [assistantMessages, setAssistantMessages] = useState<AssistantMessage[]>([]);
   const [assistantSpeaking, setAssistantSpeaking] = useState(false);
-  const [listening, setListening] = useState(false);
 
   useEffect(() => {
     const loadSubjects = async () => {
@@ -127,15 +126,11 @@ const QAPage = () => {
   };
 
   const handleVoiceDictation = (text: string) => {
-    // Always replace with the latest spoken input so the bar only reflects current speech.
     setQuestion(text);
   };
 
   const speakResult = () => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      return;
-    }
-    if (listening) {
       return;
     }
     if (!result || result.status !== "ok" || result.snippets.length === 0) return;
@@ -158,9 +153,6 @@ const QAPage = () => {
 
   const stopAssistantSpeaking = () => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      return;
-    }
-    if (listening) {
       return;
     }
     window.speechSynthesis.cancel();
@@ -229,12 +221,7 @@ const QAPage = () => {
             <p className="text-xs text-slate-500">
               Q&amp;A never calls an LLM. Everything you see comes directly from your notes.
             </p>
-            <VoiceButton
-              mode="qa"
-              onFinalText={handleVoiceDictation}
-              onCommand={handleVoiceCommand}
-              onListeningChange={setListening}
-            />
+            <VoiceButton mode="qa" onFinalText={handleVoiceDictation} onCommand={handleVoiceCommand} />
           </div>
           <button
             type="submit"
