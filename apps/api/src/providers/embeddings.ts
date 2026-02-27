@@ -1,5 +1,3 @@
-import { type PipelineType } from "@xenova/transformers";
-
 // Lazy-loaded embedding pipeline so the model is loaded only once.
 let embeddingPipeline:
   | ((
@@ -11,7 +9,13 @@ let embeddingPipeline:
 const getEmbeddingPipeline = async () => {
   if (!embeddingPipeline) {
     const { pipeline } = await import("@xenova/transformers");
-    const pipe = (await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2")) as PipelineType;
+    const pipe = (await pipeline(
+      "feature-extraction",
+      "Xenova/all-MiniLM-L6-v2"
+    )) as unknown as (
+      text: string,
+      options?: { pooling?: "mean"; normalize?: boolean }
+    ) => Promise<{ data: Float32Array }>;
     embeddingPipeline = async (text: string, options?: { pooling?: "mean"; normalize?: boolean }) => {
       const output: any = await (pipe as any)(text, {
         pooling: options?.pooling ?? "mean",

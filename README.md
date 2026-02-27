@@ -1,22 +1,48 @@
 ## AskMyNotes-AntiMatter
 
-AskMyNotes-AntiMatter is a subject‑scoped notes assistant that lets you:
+AskMyNotes-AntiMatter is a subject‑scoped notes assistant that turns messy PDFs and TXT files into a focused, citation‑first study companion. It lets you:
 
-- **Upload PDFs/TXT notes** into your own Supabase project.
-- **Ask questions** and get **verbatim snippets** from your notes (no LLM answering in Q&A mode).
+- **Upload notes** into your own Supabase project.
+- **Ask questions** and get **verbatim snippets** back from your notes (no LLM answering in Q&A mode).
 - Use **Study Mode** to generate MCQs and short‑answer questions grounded strictly in your notes via **Groq**.
 
-All data (files, chunks, embeddings) lives in your Supabase project, and every request is scoped to the authenticated Supabase user.
+All data (files, chunks, embeddings) lives in **your** Supabase project, and every request is scoped to the authenticated Supabase user.
+
+> The UI screenshots and architecture diagrams below are illustrative; you can wire up your own assets under a `docs/` folder and keep this README as‑is.
+
+---
+
+### Screenshots
+
+You can place screenshots under a `docs/` folder and wire them to these references:
+
+- Landing page
+
+  ```markdown
+  ![AskMyNotes landing](docs/landing.png)
+  ```
+
+- Q&A experience
+
+  ```markdown
+  ![AskMyNotes Q&A](docs/qa.png)
+  ```
+
+- System architecture
+
+  ```markdown
+  ![AskMyNotes system architecture](docs/system-architecture.png)
+  ```
 
 ---
 
 ### Overview
 
-- **Backend**: Node.js, Express, TypeScript, Supabase, pgvector, local embeddings (via transformers).
-- **Frontend**: React, Vite, TypeScript, Tailwind CSS.
-- **Database/Infra**: Supabase Postgres with `pgvector`, storage bucket for note files, RPC for vector similarity search.
+- **Backend**: Node.js, Express, TypeScript, Supabase, `pgvector`, local embeddings via `@xenova/transformers`.
+- **Frontend**: React, Vite, TypeScript, Tailwind CSS, dark UI with a landing page and dashboard.
+- **Database/Infra**: Supabase Postgres with `pgvector`, Supabase Storage for raw files, and an RPC for vector similarity search.
 
-The monorepo is optimized for local development and can be adapted for production deployment (e.g., Vercel/Netlify for the web app and a Node hosting platform for the API) as long as both can reach the same Supabase project.
+The monorepo is optimized for local development and can be adapted for production deployment (for example: web app on Vercel; API on a Node hosting platform) as long as both can reach the same Supabase project.
 
 ---
 
@@ -28,15 +54,16 @@ The monorepo is optimized for local development and can be adapted for productio
 
 ---
 
-### Core Features
+### Core Product Features
 
 - **Subjects & notes**
   - Create up to **3 subjects** per user.
-  - Upload multiple **PDF** and **TXT** files per subject.
+  - For each subject, upload **up to 10 PDF/TXT files**.
   - Files are stored in a Supabase storage bucket and chunked into embeddings in Postgres.
+  - Subjects can be **deleted**; their documents and chunks are removed via `ON DELETE CASCADE`.
 
-- **Q&A over your notes**
-  - Ask free‑form questions per subject.
+- **Q&A over your notes (Evidence Mode)**
+  - Ask free‑form questions scoped to a single subject.
   - Retrieval uses **vector search** (pgvector) over text chunks.
   - Responses contain:
     - Verbatim evidence snippets from your notes.
@@ -44,16 +71,152 @@ The monorepo is optimized for local development and can be adapted for productio
     - A confidence label based on similarity score.
   - **No LLM** is used in the Q&A pipeline; answers are purely extracted from your notes.
 
-- **Study Mode**
+- **Study / Explain Mode**
   - Generate:
     - **MCQs** (multiple‑choice questions).
     - **Short‑answer questions**.
   - Uses **Groq** to synthesize questions and explanations from selected chunks.
-  - Strictly grounded in the provided chunks (prompts and validation enforce this).
+  - Strictly grounded in the provided chunks (prompts and Zod validation enforce this).
 
 - **Security & multi‑tenancy**
   - All API endpoints validate Supabase JWTs.
   - All data (subjects, documents, chunks) is filtered by `user_id` at query time.
+  - Storage paths are user‑scoped (`user_id/subject_id/...`) inside the bucket.
+
+---
+
+### Frontend Experience (`apps/web`)
+
+- **Landing page (`/`)**
+  - Dark, modern hero section describing the product.
+  - Calls‑to‑action to open the dashboard, Q&A, and Study Mode.
+  - Long‑form content explaining:
+    - Why evidence‑first answers matter.
+    - How data is handled in Supabase.
+    - A simple three‑step study workflow.
+
+- **Authentication**
+  - Email/password signup and login using Supabase.
+  - Session management handled by `@supabase/supabase-js`.
+
+- **Dashboard**
+  - Create and list subjects (max 3 per user).
+  - Delete existing subjects (with confirmation).
+  - For each subject:
+    - Upload up to **10** PDF/TXT files (multi‑file upload).
+    - View a list of uploaded documents with page counts.
+    - See how many files are used out of the limit (e.g., `3 / 10 files uploaded`).
+
+- **Q&A page**
+  - Select a subject, type a question, and run Q&A.
+  - Shows:
+    - Confidence (High / Medium / Low) with color‑coded labels.
+    - A list of retrieved snippets with verbatim text and citations.
+  - Uses a shared Axios client that automatically attaches the Supabase access token.
+
+- **Study page**
+  - Select a subject once, then:
+    - Generate 5 MCQs via `/study/mcq`.
+    - Generate 3 short‑answer questions via `/study/short`.
+  - Shows:
+    - Question text, options, correct answer, and explanation.
+    - Citations for each item (file, page, chunk).
+
+---
+
+### Backend API (`apps/api`)
+
+- **Auth**
+  - `authMiddleware` verifies a Supabase JWT from the `Authorization: Bearer <token>` header using the Supabase anon key.
+  - On success, it attaches `req.userId` so every handler can scope queries by user.
+
+- **Core endpoints**
+  - `GET /health` – authenticated health check.
+  - `POST /subjects` – create a new subject (max 3 per user).
+  - `GET /subjects` – list subjects for the current user.
+  - `DELETE /subjects/:id` – delete a subject and all associated documents/chunks.
+  - `GET /documents?subject_id=...` – list documents (file name, page count) for a subject.
+  - `POST /upload` – upload a PDF/TXT file, ingest it into Supabase Storage + Postgres + pgvector.
+  - `POST /qa` – run Q&A using embeddings and pgvector search.
+  - `POST /study/mcq` – generate MCQ questions via Groq.
+  - `POST /study/short` – generate short‑answer questions via Groq.
+
+- **Ingestion pipeline**
+  - Accepts a single PDF/TXT file per request.
+  - For PDFs, uses `pdf-parse` with a simple page split; for TXT, treats the file as a single page.
+  - Writes the original file to Supabase Storage under `user_id/subject_id/<timestamp>-fileName`.
+  - Inserts a `documents` row and then:
+    - Chunks text using `chunkMultiPageText`.
+    - Embeds each chunk with a local model via `@xenova/transformers`.
+    - Inserts into the `chunks` table with the 384‑dimensional embedding.
+
+- **Q&A pipeline**
+  - Validates request via Zod.
+  - Checks subject ownership.
+  - Embeds the question, calls `match_chunks` RPC with the query embedding.
+  - Scores sentences within each chunk using simple token overlaps and selects top snippets.
+  - Returns structured `{ status, confidence, snippets }`.
+
+- **Study pipeline**
+  - Validates body via Zod and checks subject ownership.
+  - Pulls up to 200 chunks for the subject, then samples a coverage set (up to 50).
+  - Constructs a prompt for Groq with:
+    - Chunk text.
+    - Citations (chunk ids, file names, pages).
+  - Expects **strict JSON** responses and validates them with Zod:
+    - Retries up to 3 times on invalid or incomplete responses.
+  - Returns either `{ status: "ok", items }` or `{ status: "insufficient", message }`.
+
+---
+
+### Database & RPCs (`supabase/schema.sql`)
+
+- **Tables**
+  - `subjects`
+    - `id`, `user_id`, `name`, `created_at`.
+    - Foreign key to `auth.users`, `ON DELETE CASCADE`.
+  - `documents`
+    - `id`, `user_id`, `subject_id`, `file_name`, `storage_path`, `page_count`, `created_at`.
+    - Foreign key to `subjects`, `ON DELETE CASCADE`.
+  - `chunks`
+    - `id`, `user_id`, `subject_id`, `document_id`, `file_name`, `page_range`, `chunk_index`, `content`, `embedding vector(384)`, `created_at`.
+    - Foreign key to `documents`, `ON DELETE CASCADE`.
+
+- **Indexes**
+  - On `subjects.user_id`, `documents (user_id, subject_id)`, `chunks (user_id, subject_id)`, and `chunks.document_id`.
+
+- **RPC: `match_chunks`**
+  - Given `p_user_id`, `p_subject_id`, and `query_embedding`, returns the top‑`k` most similar chunks.
+  - Computes similarity as `1 - (embedding <=> query_embedding)` and orders by vector distance.
+
+---
+
+### System Architecture
+
+The system can be reasoned about in layered form, matching the architecture diagram:
+
+- **Client layer (React SPA)**
+  - Landing page, dashboard, Q&A interface, and study mode UI.
+  - Talks to the API with JSON requests and forwards Supabase auth tokens.
+
+- **API layer (Express)**
+  - Orchestrates:
+    - File upload and ingestion.
+    - Retrieval‑constrained Q&A (evidence mode).
+    - Controlled generative study/explain mode via Groq.
+  - Performs validation (payloads + auth) before calling downstream services.
+
+- **Processing layer**
+  - File processor (PDF/TXT).
+  - Chunking engine.
+  - Embedding generator using a HuggingFace transformer model.
+
+- **Data layer (Supabase)**
+  - Supabase Storage: raw files.
+  - `pgvector` for similarity search.
+  - Postgres tables for metadata and chunks.
+
+The provided system architecture diagram can be referenced in the **Screenshots** section above (for example, as `docs/system-architecture.png`).
 
 ---
 
@@ -121,7 +284,9 @@ Fill in the real values as instructed in each `.env.example` file. At a high lev
 
 - **Web (`apps/web/.env`)** – includes:
   - Supabase URL and `anon` key for browser auth.
-  - Base URL for the API (e.g., `http://localhost:4000` during development).
+  - Base URL for the API:
+    - `VITE_API_BASE_URL=http://localhost:4000` for local development.
+    - In production, point this at your deployed API (e.g., `https://your-api.example.com`).
 
 > The backend validates env configuration at startup and will fail fast with clear error messages if required values are missing or invalid.
 
@@ -158,7 +323,7 @@ Use this flow to confirm your setup is working end‑to‑end:
 
 3. **Create subjects & upload notes**
    - Create up to **3 subjects**.
-   - For each subject, upload one or more **PDF/TXT** files.
+   - For each subject, upload up to **10** **PDF/TXT** files.
    - The API will:
      - Upload files to the storage bucket.
      - Extract text (using `pdf-parse` for PDFs).
@@ -184,41 +349,34 @@ Use this flow to confirm your setup is working end‑to‑end:
 
 ---
 
-### High‑Level Architecture
+### Deployment Notes
 
 - **Frontend (`apps/web`)**
-  - React SPA using Vite and Tailwind.
-  - Supabase client handles authentication and session state.
-  - Axios (or similar) is used to call the API, attaching the Supabase JWT in the `Authorization` header.
+  - Can be deployed on platforms like Vercel or Netlify.
+  - Build:
+
+    ```bash
+    npm run build --workspace apps/web
+    ```
+
+  - Serve the generated `dist` directory.
+  - Configure `VITE_API_BASE_URL` in the hosting provider’s environment settings to point at your API.
 
 - **Backend (`apps/api`)**
-  - Express server with TypeScript.
-  - Middleware validates Supabase JWTs and injects `userId` into the request context.
-  - Endpoints for:
-    - Subject management.
-    - Document upload and ingestion.
-    - Q&A retrieval using vector similarity + heuristic snippet ranking.
-    - Study question generation via Groq with strict JSON response validation.
+  - Designed as a long‑running Node/Express server.
+  - Build:
 
-- **Database (`supabase/schema.sql`)**
-  - Tables for `subjects`, `documents`, and `chunks` (with `vector(384)` embeddings).
-  - RPC `match_chunks` encapsulates similarity search using pgvector and returns ranked chunks with similarity scores.
+    ```bash
+    npm run build --workspace apps/api
+    ```
 
----
+  - Start:
 
-### Development Notes
+    ```bash
+    npm start --workspace apps/api
+    ```
 
-- **Q&A pipeline**
-  - Uses embeddings and pgvector search only.
-  - Never calls an LLM; outputs are always direct excerpts from your notes.
-
-- **Study pipeline**
-  - Uses Groq to generate questions but is **constrained to provided chunks** via prompts and schema validation.
-  - Responses are validated and normalized before being returned to the client.
-
-- **Auth & security**
-  - All non‑public endpoints validate Supabase JWTs.
-  - Every query is scoped by `user_id` to ensure users can access only their own subjects, documents, and chunks.
+  - Deploy on any Node platform (Railway, Render, Fly.io, a VM, etc.) with the required environment variables.
 
 ---
 

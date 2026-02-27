@@ -32,7 +32,7 @@ const readPdfFile = async (filePath: string): Promise<{ pages: { pageNumber: num
   // pdf-parse returns full text; page-wise extraction is approximate here.
   // A more advanced implementation could use pdf.js, but for hackathon scope this is acceptable.
   const pagesRaw = pdfData.text.split(/\n\s*\n/g); // rough page split
-  const pages = pagesRaw.map((text, idx) => ({
+  const pages = pagesRaw.map((text: string, idx: number) => ({
     pageNumber: idx + 1,
     text,
   }));
