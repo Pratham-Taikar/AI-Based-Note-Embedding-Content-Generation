@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "../api";
+import { VoiceButton } from "../components/VoiceButton";
 
 interface Subject {
   id: string;
@@ -43,6 +44,7 @@ const StudyPage = () => {
   const [mcqResult, setMcqResult] = useState<StudyResponse<MCQItem> | null>(null);
   const [shortResult, setShortResult] = useState<StudyResponse<ShortItem> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [speaking, setSpeaking] = useState(false);
 
   useEffect(() => {
     const loadSubjects = async () => {
@@ -59,8 +61,7 @@ const StudyPage = () => {
     void loadSubjects();
   }, []);
 
-  const handleGenerateMcq = async (e: FormEvent) => {
-    e.preventDefault();
+  const runGenerateMcq = async () => {
     setError(null);
     setMcqResult(null);
     setMcqLoading(true);
@@ -76,8 +77,12 @@ const StudyPage = () => {
     }
   };
 
-  const handleGenerateShort = async (e: FormEvent) => {
+  const handleGenerateMcq = (e: FormEvent) => {
     e.preventDefault();
+    void runGenerateMcq();
+  };
+
+  const runGenerateShort = async () => {
     setError(null);
     setShortResult(null);
     setShortLoading(true);
@@ -93,6 +98,63 @@ const StudyPage = () => {
     }
   };
 
+  const handleGenerateShort = (e: FormEvent) => {
+    e.preventDefault();
+    void runGenerateShort();
+  };
+
+  const handleVoiceCommand = (cmd: { type: string; payload?: any }) => {
+    if (cmd.type === "GEN_MCQ") {
+      void runGenerateMcq();
+    }
+    if (cmd.type === "GEN_SHORT") {
+      void runGenerateShort();
+    }
+  };
+
+  const handleVoiceDictation = () => {
+    // Study page currently does not use dictation text; commands drive generation.
+  };
+
+  const speakStudy = () => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      return;
+    }
+
+    const parts: string[] = [];
+
+    if (mcqResult?.status === "ok") {
+      mcqResult.items.forEach((item, idx) => {
+        parts.push(`Question ${idx + 1}: ${item.question}`);
+        parts.push(`Options: A ${item.options.A}, B ${item.options.B}, C ${item.options.C}, D ${item.options.D}.`);
+        parts.push(`Correct answer: ${item.correct}. ${item.explanation}`);
+      });
+    }
+
+    if (shortResult?.status === "ok") {
+      shortResult.items.forEach((item, idx) => {
+        parts.push(`Short question ${idx + 1}: ${item.question}`);
+        parts.push(`Answer: ${item.answer}`);
+      });
+    }
+
+    if (parts.length === 0) return;
+
+    const utter = new SpeechSynthesisUtterance(parts.join("\n\n"));
+    utter.onend = () => setSpeaking(false);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+    setSpeaking(true);
+  };
+
+  const stopSpeaking = () => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      return;
+    }
+    window.speechSynthesis.cancel();
+    setSpeaking(false);
+  };
+
   return (
     <div className="page-shell max-w-4xl">
       <div>
@@ -104,24 +166,27 @@ const StudyPage = () => {
       {error && <p className="text-sm text-red-400 mb-2">{error}</p>}
 
       <div className="card-subtle p-4 mb-4">
-        <form className="flex flex-col md:flex-row gap-3 md:items-center">
-          <div>
-            <label className="block text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">
-              Subject
-            </label>
-            <select
-              className="select md:min-w-[220px]"
-              value={selectedSubject}
-              onChange={(e) => setSelectedSubject(e.target.value)}
-            >
-              {subjects.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </form>
+        <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+          <form className="flex flex-col md:flex-row gap-3 md:items-center">
+            <div>
+              <label className="block text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">
+                Subject
+              </label>
+              <select
+                className="select md:min-w-[220px]"
+                value={selectedSubject}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+              >
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </form>
+          <VoiceButton mode="study" onFinalText={handleVoiceDictation} onCommand={handleVoiceCommand} />
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
@@ -209,6 +274,17 @@ const StudyPage = () => {
           )}
         </div>
       </div>
+      {(mcqResult?.status === "ok" || shortResult?.status === "ok") && (
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            className="btn-ghost text-xs"
+            onClick={speaking ? stopSpeaking : speakStudy}
+          >
+            {speaking ? "Stop speaking" : "Read aloud"}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -10,6 +10,7 @@ import { supabaseAdmin } from "./supabase";
 import { ingestDocument } from "./ingestion";
 import { handleQaRequest } from "./qa";
 import { handleStudyMcq, handleStudyShort } from "./study";
+import { handleAssistantFollowup } from "./assistant";
 import { z } from "zod";
 
 const env = loadEnv();
@@ -266,6 +267,20 @@ app.post("/study/short", requireAuth, async (req: AuthedRequest, res) => {
     return res
       .status(500)
       .json({ error: err?.message ?? "Internal server error during study short" });
+  }
+});
+
+// POST /assistant/followup
+app.post("/assistant/followup", requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    const userId = req.userId!;
+    const result = await handleAssistantFollowup(userId, req.body);
+    return res.json(result);
+  } catch (err: any) {
+    console.error("POST /assistant/followup error", err);
+    return res
+      .status(500)
+      .json({ error: err?.message ?? "Internal server error during assistant follow-up" });
   }
 });
 
